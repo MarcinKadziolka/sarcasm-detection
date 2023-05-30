@@ -78,6 +78,7 @@ def test(model, test_loader, criterion):
     print(f"Test loss: {test_loss:.4f}, test accuracy: {test_accuracy:.4f}")
     wandb.log({"test_loss": test_loss, "test_accuracy": test_accuracy})
 
+# To disable wandb change use mode="disabled"
 wandb.init(project="news-headlines-sarcasm-classification", config='config.yaml', mode="online")
 config = wandb.config
 print("---------------------------------------")
