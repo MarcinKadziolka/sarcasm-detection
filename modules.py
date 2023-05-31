@@ -1,4 +1,4 @@
-from util import mask_, d, slice_diag
+from util import d, slice_diag
 
 import torch
 from torch import nn
@@ -11,12 +11,11 @@ class SelfAttention(nn.Module):
     Canonical implementation of multi-head self attention.
     """
 
-    def __init__(self, emb, heads=8, mask=False, kqnorm=False):
+    def __init__(self, emb, heads=8, kqnorm=False):
         """
 
         :param emb:
         :param heads:
-        :param mask:
         :param kqnorm:
         """
 
@@ -26,7 +25,6 @@ class SelfAttention(nn.Module):
 
         self.emb = emb
         self.heads = heads
-        self.mask = mask
 
         s = emb // heads
         # - We will break the embedding into `heads` chunks and feed each to a different attention head
@@ -82,9 +80,6 @@ class SelfAttention(nn.Module):
 
         assert dot.size() == (b*h, t, t)
 
-        if self.mask: # mask out the upper half of the dot matrix, excluding the diagonal
-            mask_(dot, maskval=float('-inf'), mask_diagonal=False)
-
         dot = F.softmax(dot, dim=2)
         # - dot now has row-wise self-attention probabilities
 
@@ -101,12 +96,11 @@ class SelfAttentionAlt(nn.Module):
     Alternative implementation of self-attention. Should contain fewer parameters, may be faster?
     """
 
-    def __init__(self, emb, heads=8, mask=False):
+    def __init__(self, emb, heads=8):
         """
 
         :param emb:
         :param heads:
-        :param mask:
         """
 
         super().__init__()
@@ -115,7 +109,6 @@ class SelfAttentionAlt(nn.Module):
 
         self.emb = emb
         self.heads = heads
-        self.mask = mask
 
         s = emb // heads
         # - We will break the embedding into `heads` chunks and feed each to a different attention head
@@ -165,8 +158,6 @@ class SelfAttentionAlt(nn.Module):
 
         assert dot.size() == (b*h, t, t)
 
-        if self.mask: # mask out the upper half of the dot matrix, excluding the diagonal
-            mask_(dot, maskval=float('-inf'), mask_diagonal=False)
 
         dot = F.softmax(dot, dim=2)
         # - dot now has row-wise self-attention probabilities
@@ -188,11 +179,10 @@ class SelfAttentionNarrow(nn.Module):
 
     """
 
-    def __init__(self, emb, heads=8, mask=False):
+    def __init__(self, emb, heads=8):
         """
         :param emb:
         :param heads:
-        :param mask:
         """
 
         super().__init__()
@@ -201,7 +191,6 @@ class SelfAttentionNarrow(nn.Module):
 
         self.emb = emb
         self.heads = heads
-        self.mask = mask
 
         s = emb // heads
         # - We will break the embedding into `heads` chunks and feed each to a different attention head
@@ -242,9 +231,6 @@ class SelfAttentionNarrow(nn.Module):
         dot = torch.bmm(queries, keys.transpose(1, 2))
 
         assert dot.size() == (b*h, t, t)
-
-        if self.mask: # mask out the upper half of the dot matrix, excluding the diagonal
-            mask_(dot, maskval=float('-inf'), mask_diagonal=False)
 
         dot = F.softmax(dot, dim=2)
         # - dot now has row-wise self-attention probabilities
@@ -319,12 +305,11 @@ class SelfAttentionGPT2(nn.Module):
 
     We include this primarily for comparison with our own canonical implementation to check for performance differences.
     """
-    def __init__(self, emb, heads, mask=False):
+    def __init__(self, emb, heads):
         super().__init__()
 
         self.nheads = heads
         self.emb = emb
-        self.mask = mask
 
         #self.c_attn = Conv1D(3 * emb, emb)
         # -- (out_channels, in_channels):
@@ -340,10 +325,6 @@ class SelfAttentionGPT2(nn.Module):
         dot = torch.matmul(q, k) # raw attention weights
 
         dot = dot / (float(v.size(-1)) ** 0.5) # scaled attention weights
-
-        if self.mask: # Apply the attention mask
-            mask_(dot, maskval=float('-inf'), mask_diagonal=False)
-        # -- This is implemented differently in the Huggingface version, but the effect should be the same.
 
         dot = nn.Softmax(dim=-1)(dot) # normalized attention weights
 
@@ -392,19 +373,17 @@ class SelfAttentionWide(nn.Module):
     Uses a full-size embedding vector for each head.
     """
 
-    def __init__(self, emb, heads=8, mask=False):
+    def __init__(self, emb, heads=8):
         """
 
         :param emb:
         :param heads:
-        :param mask:
         """
 
         super().__init__()
 
         self.emb = emb
         self.heads = heads
-        self.mask = mask
 
         self.tokeys = nn.Linear(emb, emb * heads, bias=False)
         self.toqueries = nn.Linear(emb, emb * heads, bias=False)
@@ -439,9 +418,6 @@ class SelfAttentionWide(nn.Module):
 
         assert dot.size() == (b*h, t, t)
 
-        if self.mask: # mask out the upper half of the dot matrix, excluding the diagonal
-            mask_(dot, maskval=float('-inf'), mask_diagonal=False)
-
         dot = F.softmax(dot, dim=2)
         # - dot now has row-wise self-attention probabilities
 
@@ -464,12 +440,11 @@ class SelfAttentionRelative(nn.Module):
 
     """
 
-    def __init__(self, emb, pos_embedding, heads=8, mask=False, ):
+    def __init__(self, emb, pos_embedding, heads=8):
         """
 
         :param emb:
         :param heads:
-        :param mask:
         """
 
         super().__init__()
@@ -478,7 +453,6 @@ class SelfAttentionRelative(nn.Module):
 
         self.emb = emb
         self.heads = heads
-        self.mask = mask
 
         self.pos = pos_embedding # embedding layer
 
@@ -552,9 +526,6 @@ class SelfAttentionRelative(nn.Module):
 
         assert dot.size() == (b*h, t, t)
 
-        if self.mask: # mask out the upper half of the dot matrix, excluding the diagonal
-            mask_(dot, maskval=float('-inf'), mask_diagonal=False)
-
         dot = F.softmax(dot, dim=2)
         # - dot now has row-wise self-attention probabilities
 
@@ -572,27 +543,25 @@ class TransformerBlock(nn.Module):
     A straightforward transformer block.
     """
 
-    def __init__(self, emb, heads, mask, seq_length, ff_hidden_mult=4, dropout=0.0, attention_type='default',
+    def __init__(self, emb, heads, seq_length, ff_hidden_mult=4, dropout=0.0, attention_type='default',
                  pos_embedding=None, sa_kwargs={}):
         super().__init__()
 
         if attention_type == 'default':
-            self.attention = SelfAttention(emb, heads=heads, mask=mask, **sa_kwargs)
+            self.attention = SelfAttention(emb, heads=heads, **sa_kwargs)
         elif attention_type == 'alt':
-            self.attention = SelfAttentionAlt(emb, heads=heads, mask=mask)
+            self.attention = SelfAttentionAlt(emb, heads=heads)
         elif attention_type == 'wide':
-            self.attention = SelfAttentionWide(emb, heads=heads, mask=mask)
+            self.attention = SelfAttentionWide(emb, heads=heads)
         elif attention_type == 'gpt2':
-            self.attention = SelfAttentionGPT2(emb, heads=heads, mask=mask)
+            self.attention = SelfAttentionGPT2(emb, heads=heads)
         elif attention_type == 'narrow':
-            self.attention = SelfAttentionNarrow(emb, heads=heads, mask=mask)
+            self.attention = SelfAttentionNarrow(emb, heads=heads)
         elif attention_type == 'relative':
             assert pos_embedding is not None
-            self.attention = SelfAttentionRelative(emb, heads=heads, mask=mask, pos_embedding=pos_embedding)
+            self.attention = SelfAttentionRelative(emb, heads=heads, pos_embedding=pos_embedding)
         else:
             raise Exception(f'Self-attention type {type} not recognized.')
-
-        self.mask = mask
 
         self.norm1 = nn.LayerNorm(emb)
         self.norm2 = nn.LayerNorm(emb)
