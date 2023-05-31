@@ -79,7 +79,7 @@ def test(model, test_loader, criterion):
     wandb.log({"test_loss": test_loss, "test_accuracy": test_accuracy})
 
 # To disable wandb change use mode="disabled"
-wandb.init(project="sarcasm-detection", config='config.yaml', mode="online")
+wandb.init(project="sarcasm-detection", config='config.yaml', mode="disabled")
 config = wandb.config
 print("---------------------------------------")
 print(f"Arguments received: ")
@@ -136,6 +136,7 @@ print(f"Test dataset size: {len(test_dataset)}")
 
 
 num_tokens = train_dataset.pretrained_embs.shape[0]
+seq_length = 100
 print(f"Number of tokens: {num_tokens}")
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -145,7 +146,7 @@ model = CTransformer(
         emb=config.embedding_dim, 
         heads=config.num_heads, 
         depth=config.depth, 
-        seq_length=config.seq_length, 
+        seq_length=seq_length, 
         num_tokens=num_tokens, 
         max_pool=True, 
         dropout=config.dropout,
@@ -156,12 +157,25 @@ print(f"Model is on {next(model.parameters()).device}")
 
 if config.optimizer == "Adam":
     optimizer = torch.optim.Adam(model.parameters(), lr = config.lr,
-                                    betas=(config.momentum, 0.999), 
-                                     weight_decay=config.weight_decay)
+                                 betas=(config.momentum, config.beta2),
+                                 weight_decay=config.weight_decay)
+elif config.optimizer == "AdamW":
+    optimizer = torch.optim.AdamW(model.parameters(), lr = config.lr,
+                                  betas=(config.momentum, config.beta2),
+                                  weight_decay=config.weight_decay)
 elif config.optimizer == "Adadelta":
     optimizer = torch.optim.Adadelta(model.parameters(), lr = config.lr,
                                         rho=config.momentum, 
                                          weight_decay=config.weight_decay)
+elif config.optimizer == "SGD":
+    optimizer = torch.optim.SGD(model.parameters(), lr = config.lr,
+                                    momentum=config.momentum, 
+                                     weight_decay=config.weight_decay)
+else:
+    raise ValueError(f"Unknown optimizer: {config.optimizer}")
+
+
+
 model_state_dict_name = "model_state_dict"
 optimizer_state_dict_name = "optimizer_state_dict"
 
