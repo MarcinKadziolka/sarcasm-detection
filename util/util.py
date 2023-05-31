@@ -114,22 +114,6 @@ def sample_batch(data, length, batch_size):
 
     return inputs, target
 
-def mask_(matrices, maskval=0.0, mask_diagonal=True):
-    """
-    Masks out all values in the given batch of matrices where i <= j holds,
-    i < j if mask_diagonal is false
-
-    In place operation
-
-    :param tns:
-    :return:
-    """
-
-    h, w = matrices.size(-2), matrices.size(-1)
-
-    indices = torch.triu_indices(h, w, offset=0 if mask_diagonal else 1)
-    matrices[..., indices[0], indices[1]] = maskval
-
 def d(tensor=None):
     """
     Returns a device string either for the best available device,
