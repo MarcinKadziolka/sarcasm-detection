@@ -79,14 +79,8 @@ def test(model, test_loader, criterion):
     wandb.log({"test_loss": test_loss, "test_accuracy": test_accuracy})
 
 # To enable/disable wandb change mode="online"/"disabled"
-wandb.init(project="sarcasm-detection", config='config.yaml', mode="online")
+wandb.init(project="sarcasm-detection", config='config.yaml', mode="disabled")
 config = wandb.config
-print("---------------------------------------")
-print(f"Arguments received: ")
-print("---------------------------------------")
-for k, v in sorted(config.items()):
-    print(f"{k:25}: {v}")
-print("---------------------------------------")
 
 # Don't change
 filter_h = [4,6,8]
@@ -152,10 +146,19 @@ model = CTransformer(
         dropout=config.dropout,
         attention_type=config.attention_type
         ).to(device)
+
+# INFO
 print("---------------------------------------")
 print(model)
 print("---------------------------------------")
 print(f"Model is on {next(model.parameters()).device}")
+
+print("---------------------------------------")
+print(f"Arguments received: ")
+print("---------------------------------------")
+for k, v in config.items():
+    print(f"{k:25}: {v}")
+print("---------------------------------------")
 
 if config.optimizer == "Adam":
     optimizer = torch.optim.Adam(model.parameters(), lr = config.lr,
