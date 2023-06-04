@@ -537,16 +537,16 @@ class SelfAttentionRelative(nn.Module):
 
         return self.unifyheads(out)
 
-class SelfAttentionFast(nn.Module):
-    def __init__(self, emb):
-        super(SelfAttentionFast, self).__init__()
-        self.toqueries = nn.Linear(emb, emb, bias = False)
-        self.tokeys = nn.Linear(emb, emb, bias = False)
-        self.tovalues = nn.Linear(emb, emb, bias = False)
-        self.to_r = nn.Linear(emb, emb, bias = False) 
+class FastformerHead(nn.Module):
+    def __init__(self, emb, head_size):
+        super(FastformerHead, self).__init__()
+        self.toqueries = nn.Linear(emb, head_size, bias = False)
+        self.tokeys = nn.Linear(emb, head_size, bias = False)
+        self.tovalues = nn.Linear(emb, head_size, bias = False)
+        self.to_r = nn.Linear(head_size, head_size, bias = False) 
 
-        self.to_query_att_logits = nn.Linear(emb, 1, bias = False)
-        self.to_key_att_logits = nn.Linear(emb, 1, bias = False)
+        self.to_query_att_logits = nn.Linear(head_size, 1, bias = False)
+        self.to_key_att_logits = nn.Linear(head_size, 1, bias = False)
 
     def forward(self, x):
         b, t, e = x.size()
@@ -579,6 +579,14 @@ class SelfAttentionFast(nn.Module):
         
         return output
 
+class FastformerMultiHead(nn.Module):
+    def __init__(self, emb, head_size, heads):
+        super(FastformerMultiHead, self).__init__()
+        self.heads = nn.ModuleList([FastformerHead(emb, head_size) for _ in range(heads)])
+    
+    def forward(self, x):
+        return torch.cat([h(x) for h in self.heads], dim=-1)
+
 class TransformerBlock(nn.Module):
     """
     A straightforward transformer block.
@@ -602,7 +610,10 @@ class TransformerBlock(nn.Module):
             assert pos_embedding is not None
             self.attention = SelfAttentionRelative(emb, heads=heads, pos_embedding=pos_embedding)
         elif attention_type == 'fast':
-            self.attention = SelfAttentionFast(emb)
+            # Because it's not implemented using batched + head operations in single class 
+            # (like the other attention types), we have to handle the heads here
+            head_size = emb // heads
+            self.attention = FastformerMultiHead(emb, head_size, heads=heads)
         else:
             raise Exception(f'Self-attention type {type} not recognized.')
 
