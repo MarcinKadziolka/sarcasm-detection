@@ -78,8 +78,8 @@ def test(model, test_loader, criterion):
     print(f"Test loss: {test_loss:.4f}, test accuracy: {test_accuracy:.4f}")
     wandb.log({"test_loss": test_loss, "test_accuracy": test_accuracy})
 
-# To disable wandb change use mode="disabled"
-wandb.init(project="sarcasm-detection", config='config.yaml', mode="disabled")
+# To enable/disable wandb change mode="online"/"disabled"
+wandb.init(project="sarcasm-detection", config='config.yaml', mode="online")
 config = wandb.config
 print("---------------------------------------")
 print(f"Arguments received: ")
@@ -152,7 +152,9 @@ model = CTransformer(
         dropout=config.dropout,
         attention_type=config.attention_type
         ).to(device)
-
+print("---------------------------------------")
+print(model)
+print("---------------------------------------")
 print(f"Model is on {next(model.parameters()).device}")
 
 if config.optimizer == "Adam":
