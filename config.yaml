@@ -34,4 +34,5 @@ optimizer:
 dropout:
   value: 0.0
 attention_type:
-  value: 'default'
+  value: 'fast'
+  # default, fast
