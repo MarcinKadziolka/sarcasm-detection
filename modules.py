@@ -3,7 +3,7 @@ from util import d, slice_diag
 import torch
 from torch import nn
 import torch.nn.functional as F
-
+import einops
 import random, math, sys
 
 class SelfAttention(nn.Module):
@@ -537,6 +537,47 @@ class SelfAttentionRelative(nn.Module):
 
         return self.unifyheads(out)
 
+class SelfAttentionFast(nn.Module):
+    def __init__(self, emb):
+        super(SelfAttentionFast, self).__init__()
+        self.toqueries = nn.Linear(emb, emb, bias = False)
+        self.tokeys = nn.Linear(emb, emb, bias = False)
+        self.tovalues = nn.Linear(emb, emb, bias = False)
+        self.to_r = nn.Linear(emb, emb, bias = False) 
+
+        self.to_query_att_logits = nn.Linear(emb, 1, bias = False)
+        self.to_key_att_logits = nn.Linear(emb, 1, bias = False)
+
+    def forward(self, x):
+        b, t, e = x.size()
+        queries = self.toqueries(x) # b, t, e
+        keys = self.tokeys(x) # b, t, e
+        values = self.tovalues(x) # b, t, e
+
+        query_att_logits = self.to_query_att_logits(queries)/e**0.5 # b, t, 1, because this simulates the logits wq^T q (skipping creating w)
+
+        alpha_att = torch.softmax(query_att_logits, dim=-1) # b, t, 1
+        global_query = torch.einsum('b t e, b t e -> b e', alpha_att, queries) # b, e
+        
+        # Model the interaction between global query vector and the key vector
+        repeat_global_query = einops.repeat(global_query, 'b e -> b copy e', copy = t)
+        p = repeat_global_query * keys
+
+
+        key_att_logits = self.to_key_att_logits(p)/e**0.5 # b, t, 1, because this simulates the logits wk^T p (skipping creating w)
+
+        beta_att = torch.softmax(key_att_logits, dim=-1) # b, t, 1
+        global_key = torch.einsum('b n d, b n d -> b d', beta_att, p) # b, e
+
+        # Model the interaction between global key vector and the value vector
+        repeat_global_key = einops.repeat(global_key, 'b e -> b copy e', copy = t)
+        u = repeat_global_key * values
+
+        r = self.to_r(u)
+
+        output = r + queries
+        
+        return output
 
 class TransformerBlock(nn.Module):
     """
@@ -560,6 +601,8 @@ class TransformerBlock(nn.Module):
         elif attention_type == 'relative':
             assert pos_embedding is not None
             self.attention = SelfAttentionRelative(emb, heads=heads, pos_embedding=pos_embedding)
+        elif attention_type == 'fast':
+            self.attention = SelfAttentionFast(emb)
         else:
             raise Exception(f'Self-attention type {type} not recognized.')
 
