@@ -125,3 +125,97 @@ class HeadlineDataset(Dataset):
             x.append(0)
 
         return  np.array(x), label, sent
+
+
+class Config(object):
+    batch_size = 64
+    num_workers = 4
+
+def main():
+    filter_h = [4,6,8]
+    train_sampler = None
+    config = Config()
+
+    train_dataset = HeadlineDataset(
+        csv_file='DATA/txt/headline_train.txt', 
+        word_embedding_file='DATA/embeddings/headlines_filtered_embs.txt', 
+        pad = max(filter_h) - 1,
+        whole_data='DATA/txt/headlines_clean.txt',
+    )
+
+    train_loader = torch.utils.data.DataLoader(
+        train_dataset, batch_size=config.batch_size, shuffle=(train_sampler is None),
+        num_workers=config.num_workers, pin_memory=True)
+
+
+    val_dataset = HeadlineDataset(
+        csv_file='DATA/txt/headline_val.txt', 
+        word_embedding_file='DATA/embeddings/headlines_filtered_embs.txt', 
+        pad = max(filter_h) - 1,
+        word_idx = train_dataset.word_idx,
+        pretrained_embs = train_dataset.pretrained_embs,
+        max_l=train_dataset.max_l,
+    )
+
+    val_loader = torch.utils.data.DataLoader(
+        val_dataset, batch_size=config.batch_size, shuffle=None,
+        num_workers=config.num_workers, pin_memory=True)
+
+    test_dataset = HeadlineDataset(
+        csv_file='DATA/txt/headline_test.txt', 
+        word_embedding_file='DATA/embeddings/headlines_filtered_embs.txt', 
+        pad = max(filter_h) - 1,
+        word_idx = train_dataset.word_idx,
+        pretrained_embs = train_dataset.pretrained_embs,
+        max_l=train_dataset.max_l,
+    )
+
+    test_loader = torch.utils.data.DataLoader(
+        test_dataset, batch_size=config.batch_size, shuffle=None,
+        num_workers=config.num_workers, pin_memory=True)
+
+    print(f"Train dataset size: {len(train_dataset)}")
+    print(f"Val dataset size: {len(val_dataset)}")
+    print(f"Test dataset size: {len(test_dataset)}")
+    
+    train_sarcastic = 0
+    train_non_sarcastic = 0
+    for batch_idx, (data, target, sent) in enumerate(train_loader):
+        for t in target:
+            if t == 1:
+                train_sarcastic += 1
+            else:
+                train_non_sarcastic += 1
+
+    print(f"Train sarcastic: {train_sarcastic}")
+    print(f"Train non-sarcastic: {train_non_sarcastic}")
+    test_sarcastic = 0
+    test_non_sarcastic = 0
+    
+    for batch_idx, (data, target, sent) in enumerate(test_loader):
+        for t in target:
+            if t == 1:
+                test_sarcastic += 1
+            else:
+                test_non_sarcastic += 1
+    print(f"Test sarcastic: {test_sarcastic}")
+    print(f"Test non-sarcastic: {test_non_sarcastic}")
+    val_sarcastic = 0
+    val_non_sarcastic = 0
+    for batch_idx, (data, target, sent) in enumerate(val_loader):
+        for t in target:
+            if t == 1:
+                val_sarcastic += 1
+            else:
+                val_non_sarcastic += 1
+
+    print(f"Val sarcastic: {val_sarcastic}")
+    print(f"Val non-sarcastic: {val_non_sarcastic}")
+    total = train_sarcastic + train_non_sarcastic + test_sarcastic + test_non_sarcastic + val_sarcastic + val_non_sarcastic
+    val_test = val_sarcastic + val_non_sarcastic + test_sarcastic + test_non_sarcastic
+    train_only = train_sarcastic + train_non_sarcastic
+    print(f"Train only: {train_only}")
+    print(f"Val + test: {val_test}")
+    print(f"Total: {total}")
+if __name__ == '__main__':
+    main()
