@@ -1,12 +1,11 @@
 from torch import nn
-from transformer import CTransformer
+from transformer import Transformer
 from headline_data_set import HeadlineDataset
 import torch
 from sklearn.metrics import accuracy_score
 import tqdm
 import wandb
 import os
-
 
 def train(model, train_loader, val_loader, num_epochs, criterion, optimizer):
     epoch_progress = tqdm.tqdm(range(num_epochs))
@@ -82,7 +81,6 @@ def test(model, test_loader, criterion):
 wandb.init(project="sarcasm-detection", config='config.yaml', mode="disabled")
 config = wandb.config
 
-# Don't change
 filter_h = [4,6,8]
 train_sampler = None
 
@@ -136,7 +134,7 @@ print(f"Number of tokens: {num_tokens}")
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Device: {device}")
 
-model = CTransformer(
+model = Transformer(
         emb=config.embedding_dim, 
         heads=config.num_heads, 
         depth=config.depth, 
@@ -144,7 +142,7 @@ model = CTransformer(
         num_tokens=num_tokens, 
         max_pool=True, 
         dropout=config.dropout,
-        attention_type=config.attention_type
+        attention_type=config.attention_type,
         ).to(device)
 
 # INFO
