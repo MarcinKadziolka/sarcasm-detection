@@ -3,14 +3,14 @@ batch_size:
 num_epochs: 
   value: 100
 num_heads:
-  value: 1
+  value: 10
   # default 6
 num_workers: 
   value: 4
 embedding_dim: 
-  value: 384
+  value: 400
 depth: 
-  value: 6
+  value: 10
 lr: 
   value: 0.001
 weight_decay: 
@@ -32,7 +32,7 @@ optimizer:
   value: 'SGD'
   # Adadelta, Adam, AdamW, SGD
 dropout:
-  value: 0.0
+  value: 0.05
 attention_type:
   value: 'fast'
-  # default, fast
+  # default, fast, wide
