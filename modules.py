@@ -6,7 +6,7 @@ import random, math, sys
 
 class SelfAttention(nn.Module):
     """
-    default attention
+    default attention mechanism
     """
     def __init__(self, emb, heads=8):
 
