@@ -45,7 +45,7 @@ Since the sequence is important in language, positional embeddings are added to 
 ## Experimental Setup
 ### Dataset
 
-The dataset is split into training (80%), validation (10%), and test (10%) sets. The training set contains 21,366 examples, with balanced labels for sarcastic and non-sarcastic headlines.
+The dataset is split into training (80%), validation (10%), and test (10%) sets. The training set contains 21,366 examples, with balanced labels for sarcastic and non-sarcastic headlines. The dataset is available on [Kaggle](https://www.kaggle.com/datasets/rmisra/news-headlines-dataset-for-sarcasm-detection).
 
 ### Hyperparameters
 
