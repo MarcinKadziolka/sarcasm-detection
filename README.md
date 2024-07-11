@@ -1,4 +1,5 @@
 # Sarcasm Detection Using Transformer-Based Methods: A Review
+[@MarcinKadziolka](https://github.com/MarcinKadziolka), [@k4wel](https://github.com/k4wel), [@m-podhajski](https://github.com/m-podhajski)
 ## Summary
 This project explores sarcasm detection in news headlines using transformer-based models, comparing various attention mechanisms and pre-trained models like BERT. Results show that while simpler transformers perform adequately, fine-tuned BERT models achieve the highest accuracy of 94%, demonstrating their efficacy in this challenging NLP task.
 
